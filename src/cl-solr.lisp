@@ -15,7 +15,7 @@
        do (format *debug-io* "~a~%" s)))
   (format *debug-io* "~&====== END OF ERROR OUTPUT ======~%"))
 
-(defun send-request (url &key method content parameters)
+(defun send-request (url &key (method :get) content parameters)
   (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
       (drakma:http-request (concatenate 'string *solr-url-path* url)
                            :method method
@@ -66,5 +66,6 @@
                 :method :get
                 :parameters `(("q" . ,string))))
 
-(defun debug-print-dom (doc &optional (stream *standard-output*))
-  (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc))
+(defun ping-solr-server ()
+  (let ((result (send-request "/admin/ping")))
+    (value-by-xpath "/response/str[@name='status']/text()" result :default-value nil)))

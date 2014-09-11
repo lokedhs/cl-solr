@@ -4,7 +4,9 @@
   (:export
    #:*solr-url-path*
    #:update-data
-   #:query))
+   #:query
+   #:ping
+   #:ping-solr-server))
 
 (in-package :cl-solr)
 

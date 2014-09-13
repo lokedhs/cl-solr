@@ -4,6 +4,25 @@
 
 (defvar *solr-url-path* "http://localhost:8983/solr/collection1")
 
+(defclass response ()
+  ((num-found :type integer
+              :initarg :num-found
+              :reader response/num-found)
+   (start     :type integer
+              :initarg :start
+              :reader response/start)
+   (documents :type list
+              :initarg :documents
+              :reader response/documents))
+  (:documentation "Class holding the search results"))
+
+(defmethod print-object ((obj response) stream)
+  (print-unreadable-safely (num-found start documents) obj stream
+    (format stream "NUM-FOUND ~s START ~s DOCUMENTS ~s" num-found start (let ((v documents))
+                                                                          (if (listp v)
+                                                                              (length v)
+                                                                              :not-bound)))))
+
 (defun display-stream-if-debug (stream)
   (format *debug-io* "~&====== ERROR OUTPUT ======~%")
   (let ((input (flexi-streams:make-flexi-stream stream
@@ -61,10 +80,56 @@
                   :content #'(lambda (s)
                                (dom:map-document (cxml:make-namespace-normalizer (cxml:make-octet-stream-sink s :encoding :utf-8)) doc)))))
 
-(defun query (string)
+(defun get-text-content-from-node (node)
+  (defparameter *nn* node)
+  (if (dom:has-child-nodes node)
+      (let ((text (dom:first-child node)))
+        (unless (dom:text-node-p text)
+          (error "Content node is not text"))
+        (dom:node-value text))
+      ;; No child nodes, return nil
+      nil))
+
+(defun parse-result-doc-node (result-node)
+  (cons (dom:get-attribute result-node "name") ;(intern (dom:get-attribute result-node "name") "KEYWORD")
+        (let ((text (get-text-content-from-node result-node)))
+          (string-case:string-case ((dom:node-name result-node))
+            ("str" text)
+            ("long" (parse-integer text))))))
+
+(defun parse-result-doc (doc-node)
+  (defparameter *rr* doc-node)
+  (loop
+     with children = (dom:child-nodes doc-node)
+     with length = (dom:length children)
+     for i from 0 below length
+     for node = (dom:item children i)
+     when (dom:node-p node)
+     collect (parse-result-doc-node node)))
+
+(defun query-noparse (string)
   (send-request "/select"
                 :method :get
                 :parameters `(("q" . ,string))))
+
+(defun query (string)
+  (let ((result (query-noparse string)))
+    (defparameter *palle* result)
+    (let ((result-xpath-values (xpath:evaluate "/response/result[@name='response']" result)))
+      (when (xpath:node-set-empty-p result-xpath-values)
+        (error "No result in response document"))
+      (let ((result-element (xpath:first-node result-xpath-values)))
+        (defparameter *res* result-element)
+        (make-instance 'response
+                       :num-found (parse-integer (dom:get-attribute result-element "numFound"))
+                       :start (parse-integer (dom:get-attribute result-element "start"))
+                       :documents (loop
+                                     with children = (dom:child-nodes result-element)
+                                     with length = (dom:length children)
+                                     for i from 0 below length
+                                     for node = (dom:item children i)
+                                     when (string= (dom:node-name node) "doc")
+                                     collect (parse-result-doc node)))))))
 
 (defun ping-solr-server ()
   (let ((result (send-request "/admin/ping")))

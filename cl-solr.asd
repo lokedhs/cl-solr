@@ -6,7 +6,8 @@
   :depends-on (:drakma
                :alexandria
                :cxml
-               :xpath)
+               :xpath
+               :string-case)
   :components ((:module src
                         :serial t
                         :components ((:file "package")

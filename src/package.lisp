@@ -1,12 +1,12 @@
 (defpackage :cl-solr
   (:use :cl)
   (:documentation "Common Lisp interface to Apache Solr")
-  (:export
-   #:*solr-url-path*
-   #:update-data
-   #:query
-   #:ping
-   #:ping-solr-server))
+  (:export #:*solr-url-path*
+           #:update-data
+           #:query
+           #:ping
+           #:ping-solr-server
+           #:query-noparse))
 
 (in-package :cl-solr)
 

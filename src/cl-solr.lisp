@@ -94,7 +94,6 @@
                                (dom:map-document (cxml:make-namespace-normalizer (cxml:make-octet-stream-sink s :encoding :utf-8)) doc)))))
 
 (defun get-text-content-from-node (node)
-  (defparameter *nn* node)
   (if (dom:has-child-nodes node)
       (let ((text (dom:first-child node)))
         (unless (dom:text-node-p text)
@@ -108,10 +107,10 @@
         (let ((text (get-text-content-from-node result-node)))
           (string-case:string-case ((dom:node-name result-node))
             ("str" text)
-            ("long" (parse-integer text))))))
+            ("long" (parse-integer text))
+            ("date" text)))))
 
 (defun parse-result-doc (doc-node)
-  (defparameter *rr* doc-node)
   (loop
      with children = (dom:child-nodes doc-node)
      with length = (dom:length children)
@@ -120,29 +119,28 @@
      when (dom:node-p node)
      collect (parse-result-doc-node node)))
 
-(defun query-noparse (string)
-  (send-request "/select"
-                :method :get
-                :parameters `(("q" . ,string))))
+(defun query-noparse (string &key parameters)
+  (send-request "/select" :parameters (cons `("q" . ,string) parameters)))
 
-(defun query (string)
-  (let ((result (query-noparse string)))
-    (defparameter *palle* result)
-    (let ((result-xpath-values (xpath:evaluate "/response/result[@name='response']" result)))
-      (when (xpath:node-set-empty-p result-xpath-values)
-        (error "No result in response document"))
-      (let ((result-element (xpath:first-node result-xpath-values)))
-        (defparameter *res* result-element)
-        (make-instance 'response
-                       :num-found (parse-integer (dom:get-attribute result-element "numFound"))
-                       :start (parse-integer (dom:get-attribute result-element "start"))
-                       :documents (loop
-                                     with children = (dom:child-nodes result-element)
-                                     with length = (dom:length children)
-                                     for i from 0 below length
-                                     for node = (dom:item children i)
-                                     when (string= (dom:node-name node) "doc")
-                                     collect (parse-result-doc node)))))))
+(defun process-query-result (result)
+  (let ((result-xpath-values (xpath:evaluate "/response/result[@name='response']" result)))
+    (when (xpath:node-set-empty-p result-xpath-values)
+      (error "No result in response document"))
+    (let ((result-element (xpath:first-node result-xpath-values)))
+      (make-instance 'response
+                     :num-found (parse-integer (dom:get-attribute result-element "numFound"))
+                     :start (parse-integer (dom:get-attribute result-element "start"))
+                     :documents (loop
+                                   with children = (dom:child-nodes result-element)
+                                   with length = (dom:length children)
+                                   for i from 0 below length
+                                   for node = (dom:item children i)
+                                   when (string= (dom:node-name node) "doc")
+                                   collect (parse-result-doc node))))))
+
+(defun query (string &key parameters)
+  (let ((result (query-noparse string :parameters parameters)))
+    (process-query-result result)))
 
 (defun ping-solr-server ()
   (let ((result (send-request "/admin/ping")))

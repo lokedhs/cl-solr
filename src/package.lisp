@@ -6,7 +6,10 @@
            #:query
            #:ping
            #:ping-solr-server
-           #:query-noparse))
+           #:query-noparse
+           #:response/num-found
+           #:response/start
+           #:response/documents))
 
 (in-package :cl-solr)
 

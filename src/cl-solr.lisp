@@ -80,6 +80,19 @@
                   :content #'(lambda (s)
                                (dom:map-document (cxml:make-namespace-normalizer (cxml:make-octet-stream-sink s :encoding :utf-8)) doc)))))
 
+(defun delete-data (query)
+  (let* ((doc (cxml-dom:create-document))
+         (delete-node (dom:create-element doc "delete")))
+    (dom:append-child doc delete-node)
+    (let ((query-node (dom:create-element doc "query")))
+      (dom:append-child query-node (dom:create-text-node doc query))
+      (dom:append-child delete-node query-node))
+    (send-request "/update"
+                  :method :post
+                  :parameters '(("commit" . "true"))
+                  :content #'(lambda (s)
+                               (dom:map-document (cxml:make-namespace-normalizer (cxml:make-octet-stream-sink s :encoding :utf-8)) doc)))))
+
 (defun get-text-content-from-node (node)
   (defparameter *nn* node)
   (if (dom:has-child-nodes node)

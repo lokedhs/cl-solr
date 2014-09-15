@@ -9,7 +9,8 @@
            #:query-noparse
            #:response/num-found
            #:response/start
-           #:response/documents))
+           #:response/documents
+           #:delete-data))
 
 (in-package :cl-solr)
 

@@ -74,6 +74,7 @@
          (add-node (dom:create-element doc "add")))
     (dolist (entry data)
       (dom:append-child add-node (make-doc-node doc entry)))
+    (dom:append-child add-node (dom:create-element doc "commit"))
     (dom:append-child doc add-node)
     (send-request "/update"
                   :method :post

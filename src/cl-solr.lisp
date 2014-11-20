@@ -69,12 +69,15 @@
        do (dom:append-child solr-doc (make-field-node doc key value)))
     solr-doc))
 
-(defun update-data (data)
+(defun update-data (data &key soft-commit)
   (let* ((doc (cxml-dom:create-document))
          (add-node (dom:create-element doc "add")))
     (dolist (entry data)
       (dom:append-child add-node (make-doc-node doc entry)))
-    (dom:append-child add-node (dom:create-element doc "commit"))
+    (let ((commit-element (dom:create-element doc "commit")))
+      (when soft-commit
+        (dom:set-attribute commit-element "softCommit" "true"))
+      (dom:append-child add-node commit-element))
     (dom:append-child doc add-node)
     (send-request "/update"
                   :method :post

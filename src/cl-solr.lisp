@@ -66,7 +66,10 @@
   (let ((solr-doc (dom:create-element doc "doc")))
     (loop
        for (key . value) in data
-       do (dom:append-child solr-doc (make-field-node doc key value)))
+       do (if (listp value)
+              (dolist (v value)
+                (dom:append-child solr-doc (make-field-node doc key v)))
+              (dom:append-child solr-doc (make-field-node doc key value))))
     solr-doc))
 
 (defun update-data (data &key soft-commit)

@@ -10,7 +10,11 @@
            #:response/num-found
            #:response/start
            #:response/documents
-           #:delete-data))
+           #:delete-data
+           #:solr-response-error
+           #:solr-error
+           #:solr-response-error/code
+           #:solr-response-error/text))
 
 (in-package :cl-solr)
 

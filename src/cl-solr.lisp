@@ -4,6 +4,21 @@
 
 (defvar *solr-url-path* "http://localhost:8983/solr/collection1")
 
+(define-condition solr-error (error)
+  ()
+  (:documentation "Generic superclass for all Solr errors"))
+
+(define-condition solr-response-error (solr-error)
+  ((code :type integer
+         :initarg :code
+         :reader solr-response-error/code
+         :documentation "The HTTP status code from the server")
+   (text :type string
+         :initarg :text
+         :reader solr-response-error/text
+         :documentation "The HTTP reason string"))
+  (:documentation "Error that is thrown when the Solr server replied with a HTTP error."))
+
 (defclass response ()
   ((num-found :type integer
               :initarg :num-found
@@ -49,7 +64,7 @@
          (progn
            (unless (= code 200)
              (display-stream-if-debug stream)
-             (error "Solr error: ~a. Reason=~a" code reason-string))
+             (error 'solr-response-error :code code :text reason-string))
            (let ((doc (cxml:parse-stream stream (cxml-dom:make-dom-builder))))
              doc))
       (when need-close
